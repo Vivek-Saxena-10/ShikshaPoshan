@@ -1,161 +1,148 @@
 "use client"
 
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Trash2, Droplets, Sparkles, CheckCircle2, Clock, Info, Plus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Upload, CheckCircle2, Circle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 export default function StaffCleaning() {
-  const areas = [
-    { name: 'Grade 10 Classrooms', status: 'Completed', time: '07:45 AM', progress: 100 },
-    { name: 'Primary Block Washrooms', status: 'In Progress', time: '09:30 AM', progress: 50 },
-    { name: 'Staff Room & Office', status: 'Pending', time: '11:00 AM', progress: 0 },
-    { name: 'Playground Perimeter', status: 'Scheduled', time: '02:00 PM', progress: 0 },
-  ];
-  const cleaningSummary = [
-    { label: 'Classrooms', value: '12 / 20', tone: 'text-primary' },
-    { label: 'Washrooms', value: '4 / 4', tone: 'text-accent' },
-    { label: 'Kitchen Area', value: 'Sanitized', tone: 'text-emerald-600' },
-    { label: 'Next Review', value: '02:30 PM', tone: 'text-orange-500' },
-  ];
+  const [areas, setAreas] = useState([
+    { id: 1, name: 'Kitchen Area', checked: false, photo: null },
+    { id: 2, name: 'Mess Area', checked: false, photo: null },
+    { id: 3, name: 'Washroom Ground Floor', checked: false, photo: null },
+    { id: 4, name: 'Playground Area', checked: false, photo: null },
+  ]);
+
+  const handleCheckboxChange = (id: number) => {
+    setAreas(areas.map(area => 
+      area.id === id ? { ...area, checked: !area.checked } : area
+    ));
+  };
+
+  const handlePhotoUpload = (id: number, file: File) => {
+    const fileName = file.name;
+    setAreas(areas.map(area =>
+      area.id === id ? { ...area, photo: fileName } : area
+    ));
+  };
+
+  const handleSubmit = () => {
+    alert('Cleanliness report submitted successfully!');
+  };
 
   return (
     <DashboardLayout role="staff">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-headline font-bold text-primary">Cleeaniness</h2>
-            <p className="text-muted-foreground">Daily sanitation schedule and area checklists.</p>
-          </div>
-          <Button className="bg-accent">
-            <Plus className="mr-2 h-4 w-4" /> New Task
-          </Button>
+        <div>
+          <h2 className="text-2xl font-headline font-bold text-primary">Cleanliness Report</h2>
+          <p className="text-muted-foreground">Complete daily cleanliness inspections for all areas</p>
         </div>
 
-        <Card className="border-t-4 border-t-primary">
-          <CardHeader>
-            <CardTitle className="text-lg font-headline font-bold">Cleaniness Overview</CardTitle>
-            <CardDescription>Quick view of hygiene checks and sanitation progress.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {cleaningSummary.map((item) => (
-                <div key={item.label} className="rounded-lg border bg-primary/5 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                  <p className={`mt-2 text-lg font-bold ${item.tone}`}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-lg border border-dashed bg-muted/20 p-4">
-              <p className="text-sm font-semibold text-primary">Daily Note</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Deep cleaning is scheduled for the back corridor after lunch service, and the kitchen floor needs one final inspection before sign-off.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <Droplets className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-muted-foreground uppercase">Water Tank</p>
-                  <p className="text-2xl font-bold">Clean</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-3 bg-accent/10 rounded-full">
-                  <Sparkles className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-muted-foreground uppercase">Compliance</p>
-                  <p className="text-2xl font-bold">94%</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-3 bg-orange-100 rounded-full">
-                  <Trash2 className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-muted-foreground uppercase">Waste Disp.</p>
-                  <p className="text-2xl font-bold">Logged</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-muted-foreground uppercase">Verified</p>
-                  <p className="text-2xl font-bold">8/12</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-headline font-bold">Area Maintenance Progress</CardTitle>
-            <CardDescription>Track the cleaning status of various school wings.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {areas.map((area, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${area.status === 'Completed' ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'}`}>
-                        {area.status === 'Completed' ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{area.name}</p>
-                        <p className="text-xs text-muted-foreground">Scheduled for {area.time}</p>
-                      </div>
+        <div className="space-y-4">
+          {areas.map((area) => (
+            <Card key={area.id} className="border-none shadow-lg hover:shadow-xl transition-all">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {/* Area Name and Checkbox */}
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="cursor-pointer flex items-center justify-center h-8 w-8 rounded-lg transition-all"
+                      onClick={() => handleCheckboxChange(area.id)}
+                    >
+                      {area.checked ? (
+                        <CheckCircle2 className="h-6 w-6 text-green-500" />
+                      ) : (
+                        <Circle className="h-6 w-6 text-gray-300" />
+                      )}
                     </div>
-                    <div className="text-right">
-                      <Badge variant={area.status === 'Completed' ? 'default' : 'secondary'} className={area.status === 'Completed' ? 'bg-accent' : ''}>
-                        {area.status}
-                      </Badge>
+                    <div className="flex-1">
+                      <p className="font-bold text-lg text-primary">{area.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {area.checked ? 'Confirmed Clean' : 'Awaiting Confirmation'}
+                      </p>
+                    </div>
+                    {area.checked && (
+                      <div className="bg-green-50 px-3 py-1 rounded-full">
+                        <span className="text-xs font-bold text-green-700">Verified</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Checkbox Label */}
+                  <div className="flex items-center gap-3 ml-12">
+                    <Checkbox 
+                      id={`confirm-${area.id}`}
+                      checked={area.checked}
+                      onCheckedChange={() => handleCheckboxChange(area.id)}
+                      className="h-5 w-5"
+                    />
+                    <Label htmlFor={`confirm-${area.id}`} className="text-sm font-medium cursor-pointer">
+                      Confirm this area is clean and hygienic
+                    </Label>
+                  </div>
+
+                  {/* Photo Upload Section */}
+                  <div className="ml-12 border-2 border-dashed rounded-lg p-6 bg-blue-50/30 hover:bg-blue-50/50 transition-colors">
+                    <div className="flex flex-col items-center gap-3">
+                      <Upload className="h-8 w-8 text-primary" />
+                      <div className="text-center">
+                        <p className="text-sm font-bold text-primary mb-1">
+                          {area.photo ? 'Photo uploaded' : 'Upload Photo'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {area.photo ? `File: ${area.photo}` : 'Click to upload cleanliness verification photo'}
+                        </p>
+                      </div>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              handlePhotoUpload(area.id, e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          className="cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement)?.click();
+                          }}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {area.photo ? 'Change Photo' : 'Choose File'}
+                        </Button>
+                      </label>
                     </div>
                   </div>
-                  <Progress value={area.progress} className="h-1.5" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        <Card className="border-l-4 border-l-primary bg-primary/5">
-          <CardContent className="p-4 flex items-start gap-3">
-            <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-primary">Sanitation Protocol Reminder</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Ensure all high-touch surfaces in the Science Labs and Library are sanitized with the approved solutions before 04:00 PM. Weekly deep cleaning of the water drainage system is scheduled for this Friday.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Submit Button */}
+        <div className="flex gap-3 justify-end">
+          <Button variant="outline" size="lg">
+            Save as Draft
+          </Button>
+          <Button 
+            className="bg-accent hover:bg-accent/90" 
+            size="lg"
+            onClick={handleSubmit}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Submit Cleanliness Report
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   );
