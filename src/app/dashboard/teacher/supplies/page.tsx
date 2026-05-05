@@ -18,16 +18,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MOCK_STUDENTS } from '@/lib/db';
+import { useClassStudents } from '@/lib/student-store';
 
 export default function TeacherSupplies() {
+  const students = useClassStudents('10-A');
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [selectedSupply, setSelectedSupply] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [quantity, setQuantity] = useState('');
+  const classStrength = students.length;
+  const subjectOptions = ['Math', 'Science', 'English', 'Social Studies', 'Hindi'];
   const supplies = [
-    { title: 'Textbook Sets', distributed: 45, target: 45, icon: BookOpen, color: 'text-primary' },
-    { title: 'School Uniforms', distributed: 38, target: 45, icon: Shirt, color: 'text-accent' },
-    { title: 'Stationary Kits', distributed: 42, target: 45, icon: Package, color: 'text-orange-500' },
+    { title: 'Textbook Sets', distributed: classStrength, target: classStrength, icon: BookOpen, color: 'text-primary' },
+    { title: 'School Uniforms', distributed: Math.max(classStrength - 2, 0), target: classStrength, icon: Shirt, color: 'text-accent' },
+    { title: 'Stationary Kits', distributed: Math.max(classStrength - 1, 0), target: classStrength, icon: Package, color: 'text-orange-500' },
   ];
 
   return (
@@ -38,7 +42,12 @@ export default function TeacherSupplies() {
             <h2 className="text-2xl font-headline font-bold text-primary">Classroom Logistics</h2>
             <p className="text-muted-foreground">Distribution tracking for Grade 10-A supplies.</p>
           </div>
-          <Button className="bg-accent" onClick={() => setIsLogOpen(true)}>
+          <Button className="bg-accent" onClick={() => {
+            setSelectedSupply('');
+            setSelectedSubject('');
+            setQuantity('');
+            setIsLogOpen(true);
+          }}>
             <Truck className="mr-2 h-4 w-4" /> Log New Distribution
           </Button>
         </div>
@@ -52,7 +61,7 @@ export default function TeacherSupplies() {
                     <item.icon className="h-6 w-6" />
                   </div>
                   <Badge variant={item.distributed === item.target ? "default" : "outline"} className={item.distributed === item.target ? "bg-accent" : "text-orange-500 border-orange-500"}>
-                    {Math.round((item.distributed / item.target) * 100)}% Fulfilled
+                    {item.target > 0 ? Math.round((item.distributed / item.target) * 100) : 0}% Fulfilled
                   </Badge>
                 </div>
                 <div className="space-y-2">
@@ -61,7 +70,7 @@ export default function TeacherSupplies() {
                     <p className="text-3xl font-bold">{item.distributed}</p>
                     <p className="text-xs text-muted-foreground font-medium">Class Strength: {item.target}</p>
                   </div>
-                  <Progress value={(item.distributed / item.target) * 100} className="h-2" />
+                  <Progress value={item.target > 0 ? (item.distributed / item.target) * 100 : 0} className="h-2" />
                 </div>
               </CardContent>
             </Card>
@@ -87,7 +96,7 @@ export default function TeacherSupplies() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_STUDENTS.map((student, i) => {
+                {students.map((student, i) => {
                   // Mocking distribution status for visual variety
                   const hasUniform = i % 4 !== 0;
                   const hasStationary = i % 8 !== 0;
@@ -149,7 +158,15 @@ export default function TeacherSupplies() {
                 <Label htmlFor="supply" className="text-right">
                   Supply Type
                 </Label>
-                <Select value={selectedSupply} onValueChange={setSelectedSupply}>
+                <Select
+                  value={selectedSupply}
+                  onValueChange={(value) => {
+                    setSelectedSupply(value);
+                    if (value !== 'textbooks') {
+                      setSelectedSubject('');
+                    }
+                  }}
+                >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select supply type" />
                   </SelectTrigger>
@@ -160,6 +177,25 @@ export default function TeacherSupplies() {
                   </SelectContent>
                 </Select>
               </div>
+              {selectedSupply === 'textbooks' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="subject" className="text-right">
+                    Subject
+                  </Label>
+                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select textbook subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectOptions.map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="quantity" className="text-right">
                   Quantity
@@ -180,9 +216,10 @@ export default function TeacherSupplies() {
               </Button>
               <Button onClick={() => {
                 // TODO: Implement logging logic
-                console.log('Logging distribution:', { selectedSupply, quantity });
+                console.log('Logging distribution:', { selectedSupply, selectedSubject, quantity });
                 setIsLogOpen(false);
                 setSelectedSupply('');
+                setSelectedSubject('');
                 setQuantity('');
               }}>
                 Log Distribution

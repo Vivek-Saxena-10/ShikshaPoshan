@@ -1,17 +1,20 @@
 "use client"
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { academicPerformanceInsights, AcademicPerformanceInsightsOutput } from '@/ai/flows/academic-performance-insights-flow';
-import { MOCK_STUDENTS } from '@/lib/db';
+import { useClassStudents } from '@/lib/student-store';
 import { GraduationCap, Users, ClipboardList, Sparkles, Loader2, AlertCircle, X, Lightbulb, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TeacherHome() {
+  const router = useRouter();
+  const students = useClassStudents('10-A');
   const [aiResult, setAiResult] = useState<AcademicPerformanceInsightsOutput | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const { toast } = useToast();
@@ -21,7 +24,7 @@ export default function TeacherHome() {
     try {
       const result = await academicPerformanceInsights({
         schoolName: 'Govt. Secondary School #1',
-        studentData: MOCK_STUDENTS.map(s => ({
+        studentData: students.map(s => ({
           studentId: s.id,
           studentName: s.name,
           grades: s.marks,
@@ -52,14 +55,6 @@ export default function TeacherHome() {
             <h2 className="text-2xl font-headline font-bold text-primary">Class 10-A Overview</h2>
             <p className="text-muted-foreground">Manage your classroom activities and student progress.</p>
           </div>
-          <Button 
-            onClick={runAiAnalysis} 
-            disabled={loadingAi} 
-            className="bg-accent hover:bg-accent/90 shadow-md"
-          >
-            {loadingAi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            {loadingAi ? 'Analyzing...' : 'AI Academic Insights'}
-          </Button>
         </div>
 
         {aiResult && (
@@ -159,7 +154,14 @@ export default function TeacherHome() {
                 <div className="space-y-1.5">
                    <Progress value={33} className="h-2" />
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-2 font-bold">Continue Data Entry</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 font-bold"
+                  onClick={() => router.push('/dashboard/teacher/marks')}
+                >
+                  Continue Data Entry
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -177,11 +179,11 @@ export default function TeacherHome() {
               <div className="space-y-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Uniforms Distributed</span>
-                  <span className="font-bold">100%</span>
+                  <span className="font-bold">{students.length > 0 ? `${Math.max(Math.round(((students.length - 2) / students.length) * 100), 0)}%` : '0%'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Book Kits Remaining</span>
-                  <span className="font-bold text-primary">2 Units</span>
+                  <span className="font-bold text-primary">{students.length > 0 ? '2 Units' : '0 Units'}</span>
                 </div>
                 <Button variant="outline" size="sm" className="w-full mt-2">Inventory Management</Button>
               </div>
