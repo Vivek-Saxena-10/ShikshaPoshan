@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [role, setRole] = useState<string>('Administrator');
   const [isLoading, setIsLoading] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
-  const [isRequestOpen, setIsRequestOpen] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,15 +79,6 @@ export default function LoginPage() {
     toast({
       title: "Reset link sent",
       description: "If an account exists for this email, you will receive a reset link shortly.",
-    });
-  };
-
-  const handleRequestAccess = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsRequestOpen(false);
-    toast({
-      title: "Request submitted",
-      description: "Your access request has been sent to the district administrator for approval.",
     });
   };
 
@@ -166,76 +156,6 @@ export default function LoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
-          <div className="text-sm text-center text-muted-foreground">
-            Don't have an account?{' '}
-            <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
-              <DialogTrigger asChild>
-                <button type="button" className="text-primary hover:underline font-medium">Request access</button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <form onSubmit={handleRequestAccess}>
-                  <DialogHeader>
-                    <DialogTitle>Request Access</DialogTitle>
-                    <DialogDescription>
-                      Submit your details to the district office. Requests are usually processed within 24-48 hours.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="req-name">Full Name</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input id="req-name" placeholder="Full name" className="pl-10" required />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="req-email">Work Email</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input id="req-email" type="email" placeholder="email@school.gov" className="pl-10" required />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="req-role">Proposed Role</Label>
-                        <Select required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Principal">Principal</SelectItem>
-                            <SelectItem value="Teacher">Teacher</SelectItem>
-                            <SelectItem value="Staff">Operational Staff</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="req-school">School Name</Label>
-                        <div className="relative">
-                          <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input id="req-school" placeholder="School Name" className="pl-10" required />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="req-phone">Phone Number</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="req-phone" placeholder="+91 XXXXX XXXXX" className="pl-10" required />
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-                      <Send className="mr-2 h-4 w-4" /> Submit Request
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
           <Link href="/" className="text-sm text-center text-muted-foreground hover:underline">
             Back to Home
           </Link>

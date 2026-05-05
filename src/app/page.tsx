@@ -23,12 +23,6 @@ export default function Home() {
           <span className="text-xl font-headline font-bold text-primary">ShikshaPoshan</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
-          <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="/news">
-            News
-          </Link>
-          <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="/volunteering">
-            Volunteering
-          </Link>
           <Link href="/login">
             <Button variant="default" size="sm" className="font-bold px-6">Sign In</Button>
           </Link>
@@ -155,20 +149,19 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t py-12 bg-white">
-        <div className="container px-4 md:px-6 mx-auto flex flex-col sm:flex-row justify-between items-center gap-8">
-          <div className="flex flex-col items-center sm:items-start gap-2">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-primary" />
-              <span className="font-headline font-bold text-primary">ShikshaPoshan</span>
-            </div>
-            <p className="text-sm text-muted-foreground font-medium">© 2024 Ministry of Education. Smart School Initiative.</p>
+      <footer className="border-t py-8 bg-white">
+        <div className="container px-4 md:px-6 mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+            <p className="text-sm text-muted-foreground font-medium">© 2026 ShikshaPoshan | Academic Project | All Rights Reserved</p>
+            <nav className="flex gap-6">
+              <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="/insights">
+                Insights
+              </Link>
+              <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="/volunteering">
+                Volunteer
+              </Link>
+            </nav>
           </div>
-          <nav className="flex gap-8">
-            <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="#">Policy</Link>
-            <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="#">Guidelines</Link>
-            <Link className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors" href="#">Privacy</Link>
-          </nav>
         </div>
       </footer>
     </div>
