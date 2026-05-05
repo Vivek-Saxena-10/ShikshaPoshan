@@ -30,6 +30,7 @@ export interface Student {
   id: string;
   name: string;
   class: string;
+  gender?: 'male' | 'female' | 'other';
   schoolId: string;
   attendance: { date: string; status: 'present' | 'absent' }[];
   marks: { subject: string; score: number }[];
@@ -45,11 +46,11 @@ export interface InfrastructureRecord {
 }
 
 export const MOCK_STUDENTS: Student[] = [
-  { id: '101', name: 'Rahul Sharma', class: '10-A', schoolId: '1', attendance: [], marks: [] },
-  { id: '102', name: 'Priya Patel', class: '10-A', schoolId: '1', attendance: [], marks: [] },
-  { id: '103', name: 'Amit Kumar', class: '10-A', schoolId: '1', attendance: [], marks: [] },
-  { id: '104', name: 'Sneha Singh', class: '10-A', schoolId: '1', attendance: [], marks: [] },
-  { id: '105', name: 'Vikram Yadav', class: '10-A', schoolId: '1', attendance: [], marks: [] },
+  { id: '101', name: 'Rahul Sharma', class: '10-A', gender: 'male', schoolId: '1', attendance: [], marks: [] },
+  { id: '102', name: 'Priya Patel', class: '10-A', gender: 'female', schoolId: '1', attendance: [], marks: [] },
+  { id: '103', name: 'Amit Kumar', class: '10-A', gender: 'male', schoolId: '1', attendance: [], marks: [] },
+  { id: '104', name: 'Sneha Singh', class: '10-A', gender: 'female', schoolId: '1', attendance: [], marks: [] },
+  { id: '105', name: 'Vikram Yadav', class: '10-A', gender: 'male', schoolId: '1', attendance: [], marks: [] },
 ];
 
 export const MOCK_USERS: User[] = [

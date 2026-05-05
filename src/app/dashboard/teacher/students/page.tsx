@@ -1,33 +1,136 @@
 "use client"
 
+import { useMemo, useState } from 'react';
+import { FileText, Mail, MoreVertical, Phone, Plus, Search, Users } from 'lucide-react';
+
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { MOCK_STUDENTS } from '@/lib/db';
-import { Users, Mail, Phone, MoreVertical, Search, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Student } from '@/lib/db';
+import { addStudent, getNextStudentId, getStoredStudents, useClassStudents } from '@/lib/student-store';
+
+const DEFAULT_CLASS = '10-A';
+const CLASS_OPTIONS = ['10-A', '10-B', '10-C'];
+
+type StudentFormState = {
+  className: string;
+  gender: 'male' | 'female' | 'other';
+  id: string;
+  name: string;
+};
+
+const emptyForm = (): StudentFormState => ({
+  className: DEFAULT_CLASS,
+  gender: 'male',
+  id: '',
+  name: '',
+});
 
 export default function TeacherStudents() {
+  const [selectedClass, setSelectedClass] = useState(DEFAULT_CLASS);
+  const students = useClassStudents(selectedClass);
+  const [search, setSearch] = useState('');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [form, setForm] = useState<StudentFormState>(emptyForm());
+  const boysCount = students.filter((student) => student.gender === 'male').length;
+  const girlsCount = students.filter((student) => student.gender === 'female').length;
+  const otherCount = students.filter((student) => student.gender === 'other').length;
+
+  const filteredStudents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return students.filter((student) =>
+      query === ''
+        ? true
+        : student.name.toLowerCase().includes(query) || student.id.includes(query)
+    );
+  }, [search, students]);
+
+  const openAddDialog = () => {
+    setForm({
+      ...emptyForm(),
+      className: selectedClass,
+    });
+    setIsAddOpen(true);
+  };
+
+  const handleAddStudent = () => {
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      return;
+    }
+
+    const allStudents = getStoredStudents();
+    const nextId = form.id.trim() || getNextStudentId(allStudents);
+    if (allStudents.some((student) => student.id === nextId)) {
+      return;
+    }
+
+    const newStudent: Student = {
+      id: nextId,
+      name: trimmedName,
+      class: form.className,
+      gender: form.gender,
+      schoolId: '1',
+      attendance: [],
+      marks: [],
+    };
+
+    addStudent(newStudent);
+    setIsAddOpen(false);
+    setForm(emptyForm());
+  };
+
   return (
     <DashboardLayout role="teacher">
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-headline font-bold text-primary">Student Directory</h2>
-            <p className="text-muted-foreground">Class list and detailed student records for Grade 10-A.</p>
+            <p className="text-muted-foreground">Class list and detailed student records for Grade {selectedClass}.</p>
           </div>
-          <Button className="bg-primary"><FileText className="mr-2 h-4 w-4" /> Export Class List</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" onClick={openAddDialog}>
+              <Plus className="mr-2 h-4 w-4" /> Add Student
+            </Button>
+            <Button className="bg-primary"><FileText className="mr-2 h-4 w-4" /> Export Class List</Button>
+          </div>
         </div>
 
         <div className="flex gap-4 items-center">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search students by name or roll number..." className="pl-10" />
+            <Input
+              placeholder="Search students by name or roll number..."
+              className="pl-10"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
-          <Button variant="outline">Filter Class</Button>
+          <Select value={selectedClass} onValueChange={setSelectedClass}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter Class" />
+            </SelectTrigger>
+            <SelectContent>
+              {CLASS_OPTIONS.map((className) => (
+                <SelectItem key={className} value={className}>
+                  Grade {className}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <Card className="border-none shadow-sm overflow-hidden">
@@ -44,7 +147,7 @@ export default function TeacherStudents() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_STUDENTS.map((student) => (
+                {filteredStudents.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell className="font-mono text-xs font-bold">{student.id}</TableCell>
                     <TableCell>
@@ -92,7 +195,9 @@ export default function TeacherStudents() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between">
-                <p className="text-2xl font-bold">22 Boys / 23 Girls</p>
+                <p className="text-2xl font-bold">
+                  {boysCount} Boys / {girlsCount} Girls{otherCount > 0 ? ` / ${otherCount} Other` : ''}
+                </p>
                 <Users className="h-8 w-8 text-accent opacity-20" />
               </div>
             </CardContent>
@@ -114,12 +219,88 @@ export default function TeacherStudents() {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between">
-                <p className="text-2xl font-bold">45 / 50 Capacity</p>
+                <p className="text-2xl font-bold">{students.length} / 50 Capacity</p>
                 <Users className="h-8 w-8 text-orange-600 opacity-20" />
               </div>
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogContent className="sm:max-w-[460px]">
+            <DialogHeader>
+              <DialogTitle>Add Student</DialogTitle>
+              <DialogDescription>
+                New students are saved class-wise and automatically appear in every tab for that class.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2">
+                <Label htmlFor="student-name">Student Name</Label>
+                <Input
+                  id="student-name"
+                  value={form.name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Enter full name"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="student-id">Roll Number</Label>
+                <Input
+                  id="student-id"
+                  value={form.id}
+                  onChange={(event) => setForm((prev) => ({ ...prev, id: event.target.value }))}
+                  placeholder="Leave blank to auto-generate"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Class</Label>
+                <Select
+                  value={form.className}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, className: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CLASS_OPTIONS.map((className) => (
+                      <SelectItem key={className} value={className}>
+                        Grade {className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Gender</Label>
+                <Select
+                  value={form.gender}
+                  onValueChange={(value: 'male' | 'female' | 'other') => setForm((prev) => ({ ...prev, gender: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+              <Button className="bg-primary" onClick={handleAddStudent} disabled={form.name.trim() === ''}>
+                Save Student
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
