@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, Utensils, ShieldCheck, Newspaper, Users } from 'lucide-react';
+import { GraduationCap, Utensils, Eye, Newspaper, Users } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 
@@ -62,9 +62,9 @@ export default function Home() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                <Link href="/login">
+                <Link href="/insights">
                   <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 font-black px-12 py-7 text-xl rounded-xl shadow-2xl transition-transform hover:scale-105">
-                    Enter Dashboard
+                    Insights
                   </Button>
                 </Link>
                 <Link href="/volunteering">
@@ -73,6 +73,30 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* About Us */}
+        <section className="w-full py-24 bg-white">
+          <div className="container px-4 md:px-6 mx-auto max-w-4xl">
+            <div className="text-center space-y-4 mb-16">
+              <h2 className="text-4xl font-black font-headline text-primary">About Us</h2>
+              <div className="w-24 h-1.5 bg-accent mx-auto rounded-full" />
+            </div>
+            <div className="space-y-6 text-lg text-muted-foreground font-medium leading-relaxed">
+              <p>
+                ShikshaPoshan is a web-based smart monitoring system designed to improve the quality of education and the effectiveness of mid-day meal programs in government schools. Our platform aims to bring transparency, accountability, and real-time insights into school operations, ensuring that students receive both quality learning and proper nutrition.
+              </p>
+              <p>
+                We believe that education and nutrition go hand in hand in shaping a child's future. ShikshaPoshan provides an integrated solution where school authorities, administrators, and stakeholders can monitor attendance, academic progress, meal distribution, and hygiene standards through a single digital platform.
+              </p>
+              <p>
+                By leveraging technology, we strive to reduce manual errors, prevent misuse of resources, and enable data-driven decision-making. Our system empowers authorities to identify gaps, take timely action, and ensure that every child benefits from government initiatives.
+              </p>
+              <p className="font-bold text-primary pt-4">
+                At ShikshaPoshan, our mission is to support a healthier, smarter, and more transparent education system for all.
+              </p>
             </div>
           </div>
         </section>
@@ -86,16 +110,16 @@ export default function Home() {
             </div>
             <div className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
               {[
-                { title: 'Nutritional Care', icon: Utensils, desc: 'Automated monitoring of Mid-Day Meal quality and stock distribution across all regional schools.', color: 'text-orange-500' },
-                { title: 'Academic Excellence', icon: GraduationCap, desc: 'Leveraging AI to analyze learning outcomes and identify students requiring specialized intervention.', color: 'text-primary' },
-                { title: 'Safe Environment', icon: ShieldCheck, desc: 'Real-time infrastructure auditing to ensure hygiene, safety, and security standards are maintained.', color: 'text-accent' },
+                { title: 'Academic Excellence', icon: GraduationCap, desc: 'We ensure consistent monitoring of student attendance and learning progress, helping schools maintain high educational standards and identify areas that need improvement.', color: 'text-blue-500' },
+                { title: 'Proper Nutrition', icon: Utensils, desc: 'Our system tracks mid-day meal distribution, ensuring every child receives healthy, hygienic, and timely meals to support their growth and learning.', color: 'text-orange-500' },
+                { title: 'Transparency & Accountability', icon: Eye, desc: 'ShikshaPoshan promotes transparency by providing real-time data and reports, reducing misuse of resources and ensuring accountability at every level.', color: 'text-purple-500' },
               ].map((pillar, i) => (
                 <Card key={i} className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 group rounded-2xl overflow-hidden">
                   <CardHeader className="flex flex-col items-center pt-10">
                     <div className={cn("p-4 rounded-2xl bg-muted group-hover:scale-110 transition-transform duration-300", pillar.color)}>
                       <pillar.icon className="h-10 w-10" />
                     </div>
-                    <CardTitle className="font-headline text-2xl pt-6">{pillar.title}</CardTitle>
+                    <CardTitle className="font-headline text-2xl pt-6 text-center">{pillar.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-center pb-10 text-muted-foreground font-medium px-8">
                     {pillar.desc}
