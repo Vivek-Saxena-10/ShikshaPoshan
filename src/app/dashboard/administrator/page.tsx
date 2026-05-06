@@ -53,12 +53,14 @@ export default function AdminHome() {
   const { data: schools, isLoading: loadingSchools } = useCollection(schoolsCollectionRef);
 
   const totalStudents = schools?.reduce((acc, s) => acc + (Number(s.studentCount) || 0), 0) || 0;
+  const estimatedMealsServed = Math.round(totalStudents * 0.85);
+  const criticalAlerts = 5;
 
   const stats = [
     { label: 'Total Schools', value: (loadingSchools || isUserLoading) ? '...' : (schools?.length || 0).toString(), icon: School, color: 'text-primary' },
     { label: 'Total Students', value: (loadingSchools || isUserLoading) ? '...' : totalStudents.toLocaleString() + '+', icon: Users, color: 'text-accent' },
-    { label: 'Meals Today', value: '118,400', icon: Utensils, color: 'text-orange-500' },
-    { label: 'Critical Alerts', value: '12', icon: AlertTriangle, color: 'text-red-500' },
+    { label: 'Meals Today', value: (loadingSchools || isUserLoading) ? '...' : estimatedMealsServed.toLocaleString(), icon: Utensils, color: 'text-orange-500' },
+    { label: 'Critical Alerts', value: criticalAlerts.toString(), icon: AlertTriangle, color: 'text-red-500' },
   ];
 
   return (
@@ -84,25 +86,59 @@ export default function AdminHome() {
           ))}
         </div>
 
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-headline">Recent Alerts</CardTitle>
-            <CardDescription>Critical issues requiring immediate administrative attention</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-start gap-4 p-3 rounded-lg border border-red-100 bg-red-50/30">
-                  <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-red-900">MDM Quality Concern - School #{i*120}</p>
-                    <p className="text-sm text-red-700">Stock discrepancy reported in spices and legumes for the upcoming week.</p>
+        {/* Alert Tabs Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Schools with Low MDM Review */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-headline text-lg">Low MDM Review Rating</CardTitle>
+              <CardDescription>Schools with mid-day meal review below 1.5</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[
+                  { name: 'Model Primary School A', review: 1.2, students: 245 },
+                  { name: 'Government School #120', review: 1.4, students: 312 },
+                  { name: 'Rural Primary School B', review: 1.1, students: 187 },
+                ].map((school, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-amber-100 bg-amber-50/30">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-amber-900 truncate">{school.name}</p>
+                      <p className="text-sm text-amber-700">Rating: <span className="font-semibold">{school.review}/3</span> • {school.students} students</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Schools with Low Teacher Attendance */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="font-headline text-lg">Low Teacher Attendance</CardTitle>
+              <CardDescription>Schools with teacher average attendance below 70%</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[
+                  { name: 'Senior Secondary School #45', attendance: 65, teachers: 28 },
+                  { name: 'High School Town Center', attendance: 68, teachers: 35 },
+                  { name: 'District School #201', attendance: 62, teachers: 22 },
+                ].map((school, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-red-100 bg-red-50/30">
+                    <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-red-900 truncate">{school.name}</p>
+                      <p className="text-sm text-red-700">Attendance: <span className="font-semibold">{school.attendance}%</span> • {school.teachers} teachers</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
       </div>
     </DashboardLayout>
   );
