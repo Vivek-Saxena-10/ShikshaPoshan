@@ -20,11 +20,12 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Student } from '@/lib/db';
-import { addStudent, getNextStudentId, getStoredStudents, removeStudent, useClassStudents } from '@/lib/student-store';
+import { addStudent, getNextStudentId, getStoredStudents, removeStudent, saveStudents, useClassStudents } from '@/lib/student-store';
 import { cn } from '@/lib/utils';
 
 const HISTORY_DAYS = 30;
 const CLASS_NAME = '10-A';
+const ATTENDANCE_TEACHER_DATE_KEY = 'teacher-attendance-taken-date';
 
 type HistoryDay = {
   key: string;
@@ -79,9 +80,13 @@ export default function TeacherAttendance() {
       return;
     }
 
-    setAttendance((prev) =>
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    setAttendance(
       Object.fromEntries(
-        students.map((student) => [student.id, prev[student.id] ?? true])
+        students.map((student) => {
+          const todayRecord = student.attendance.find((record) => record.date === todayKey);
+          return [student.id, todayRecord ? todayRecord.status === 'present' : true];
+        })
       )
     );
   }, [mounted, students]);
@@ -91,8 +96,38 @@ export default function TeacherAttendance() {
   };
 
   const saveAttendance = () => {
-    // TODO: Implement saving to database
-    console.log('Saving attendance:', attendance);
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    const allStudents = getStoredStudents();
+    const updatedStudents = allStudents.map((student) => {
+      if (student.class !== CLASS_NAME) {
+        return student;
+      }
+
+      const isPresent = attendance[student.id] ?? false;
+      const attendanceRecords = [...student.attendance];
+      const existingIndex = attendanceRecords.findIndex((a) => a.date === todayKey);
+
+      if (existingIndex >= 0) {
+        attendanceRecords[existingIndex] = {
+          ...attendanceRecords[existingIndex],
+          status: isPresent ? 'present' : 'absent',
+        };
+      } else {
+        attendanceRecords.push({ date: todayKey, status: isPresent ? 'present' : 'absent' });
+      }
+
+      return {
+        ...student,
+        attendance: attendanceRecords,
+      };
+    });
+
+    saveStudents(updatedStudents);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ATTENDANCE_TEACHER_DATE_KEY, todayKey);
+    }
+
     alert('Attendance saved successfully!');
   };
 

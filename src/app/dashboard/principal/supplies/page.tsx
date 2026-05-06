@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,11 +20,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { getStoredSupplyRequests, saveSupplyRequests, subscribeSupplyRequests, SupplyRequest } from '@/lib/supply-request-store';
 
 export default function PrincipalSupplies() {
   const { toast } = useToast();
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [supplyRequests, setSupplyRequests] = useState<SupplyRequest[]>(() => getStoredSupplyRequests().filter((request) => request.target === 'Uniforms & Books Section'));
+
+  useEffect(() => {
+    const unsubscribe = subscribeSupplyRequests(() => {
+      setSupplyRequests(getStoredSupplyRequests().filter((request) => request.target === 'Uniforms & Books Section'));
+    });
+
+    return unsubscribe;
+  }, []);
 
   const supplies = [
     { title: 'Textbook Sets', distributed: 412, target: 450, icon: BookOpen, color: 'text-primary' },
@@ -88,6 +98,67 @@ export default function PrincipalSupplies() {
             </Card>
           ))}
         </div>
+
+        <Card className="border border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-headline text-lg">Teacher Requests for Uniforms & Books</CardTitle>
+            <CardDescription>Requests submitted by teachers routed to your section.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {supplyRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No pending teacher requests in this section yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {supplyRequests.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-border p-4 bg-secondary/5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-base font-semibold">{request.section} — {request.type === 'textbooks' ? 'Textbooks' : request.type === 'uniforms' ? 'Uniforms' : 'Stationery'}</p>
+                        <p className="text-sm text-muted-foreground">Qty: {request.quantity} • Requested on {request.date}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{request.target}</Badge>
+                        {request.forwardedToAdmin ? (
+                          <Badge variant="outline" className="text-xs">
+                            Forwarded on {request.forwardedDate}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                    {request.reason && <p className="mt-3 text-sm text-muted-foreground">{request.reason}</p>}
+                    {!request.forwardedToAdmin ? (
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const updatedRequests = getStoredSupplyRequests().map((existing) =>
+                              existing.id === request.id
+                                ? {
+                                    ...existing,
+                                    forwardedToAdmin: true,
+                                    forwardedDate: new Date().toLocaleDateString(),
+                                  }
+                                : existing,
+                            );
+                            saveSupplyRequests(updatedRequests);
+                            setSupplyRequests(updatedRequests.filter((item) => item.target === 'Uniforms & Books Section'));
+                            toast({
+                              title: 'Sent to administrator',
+                              description: `${request.section} ${request.type === 'textbooks' ? 'Textbooks' : request.type === 'uniforms' ? 'Uniforms' : 'Stationery'} request has been forwarded to admin.`,
+                            });
+                          }}
+                        >
+                          Send to Administrator
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

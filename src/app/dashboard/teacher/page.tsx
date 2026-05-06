@@ -1,224 +1,274 @@
 "use client"
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { academicPerformanceInsights, AcademicPerformanceInsightsOutput } from '@/ai/flows/academic-performance-insights-flow';
-import { useClassStudents } from '@/lib/student-store';
-import { GraduationCap, Users, ClipboardList, Sparkles, Loader2, AlertCircle, X, Lightbulb, CheckCircle2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Upload } from 'lucide-react';
+import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { getStoredStudents, getStudentsByClass, useClassStudents } from '@/lib/student-store';
+
+const ATTENDANCE_TEACHER_DATE_KEY = 'teacher-attendance-taken-date';
+const TEACHER_CLASS = '10-A';
+const LOW_MARKS_THRESHOLD = 30;
+
+const getTodayKey = () => new Date().toISOString().slice(0, 10);
+const getDateKey = (date: Date) => date.toISOString().slice(0, 10);
+const getAbsentStreak = (attendance: { date: string; status: 'present' | 'absent' }[]) => {
+  if (attendance.length === 0) {
+    return 0;
+  }
+
+  const sortedAttendance = [...attendance].sort((a, b) => b.date.localeCompare(a.date));
+  if (sortedAttendance[0].status !== 'absent') {
+    return 0;
+  }
+
+  let streak = 1;
+  let previousDate = new Date(sortedAttendance[0].date);
+
+  for (let i = 1; i < sortedAttendance.length; i += 1) {
+    const record = sortedAttendance[i];
+    const currentDate = new Date(record.date);
+    const expectedDate = new Date(previousDate);
+    expectedDate.setDate(previousDate.getDate() - 1);
+
+    if (getDateKey(currentDate) !== getDateKey(expectedDate) || record.status !== 'absent') {
+      break;
+    }
+
+    streak += 1;
+    previousDate = currentDate;
+  }
+
+  return streak;
+};
 
 export default function TeacherHome() {
-  const router = useRouter();
-  const students = useClassStudents('10-A');
-  const [aiResult, setAiResult] = useState<AcademicPerformanceInsightsOutput | null>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
-  const { toast } = useToast();
+  const students = useClassStudents(TEACHER_CLASS);
+  const [studentList, setStudentList] = useState(students);
+  const [attendancePhoto, setAttendancePhoto] = useState('');
+  const [pendingAssignments] = useState(['Math worksheet review', 'Science lab report']);
+  const [isAttendanceTaken, setIsAttendanceTaken] = useState(false);
+  const averageClassAttendance = 88;
 
-  const runAiAnalysis = async () => {
-    setLoadingAi(true);
-    try {
-      const result = await academicPerformanceInsights({
-        schoolName: 'Govt. Secondary School #1',
-        studentData: students.map(s => ({
-          studentId: s.id,
-          studentName: s.name,
-          grades: s.marks,
-          attendanceRecords: s.attendance
-        }))
-      });
-      setAiResult(result);
-      toast({
-        title: "Analysis Complete",
-        description: "AI has generated insights for your classroom.",
-      });
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: "Could not generate AI insights at this time. Please try again.",
-      });
-    } finally {
-      setLoadingAi(false);
-    }
-  };
+  useEffect(() => {
+    setStudentList(students);
+  }, [students]);
+
+  useEffect(() => {
+    const storedDate = typeof window !== 'undefined' ? localStorage.getItem(ATTENDANCE_TEACHER_DATE_KEY) : null;
+    setIsAttendanceTaken(storedDate === getTodayKey());
+  }, []);
+
+  useEffect(() => {
+    const syncStudents = () => {
+      setStudentList(getStudentsByClass(TEACHER_CLASS, getStoredStudents()));
+    };
+
+    syncStudents();
+    window.addEventListener('student-store-updated', syncStudents);
+    window.addEventListener('storage', syncStudents);
+
+    return () => {
+      window.removeEventListener('student-store-updated', syncStudents);
+      window.removeEventListener('storage', syncStudents);
+    };
+  }, []);
+
+  const lowMarkStudents = useMemo(
+    () => studentList
+      .map((student) => ({
+        student,
+        lowMarks: student.marks.filter((mark) => mark.score < LOW_MARKS_THRESHOLD),
+      }))
+      .filter((record) => record.lowMarks.length > 0),
+    [studentList]
+  );
+
+  const absentWarningStudents = useMemo(
+    () => studentList
+      .map((student) => ({
+        student,
+        streak: getAbsentStreak(student.attendance),
+      }))
+      .filter((record) => record.streak >= 4),
+    [studentList]
+  );
+
+  const marksDistribution = useMemo(() => {
+    const totals = studentList.map((student) => {
+      const scores = student.marks.map((mark) => mark.score);
+      return scores.length > 0 ? scores.reduce((total, score) => total + score, 0) / scores.length : 0;
+    });
+
+    const buckets = {
+      above90: 0,
+      above80: 0,
+      above50: 0,
+      above30: 0,
+      below30: 0,
+    };
+
+    totals.forEach((average) => {
+      if (average > 90) {
+        buckets.above90 += 1;
+      } else if (average > 80) {
+        buckets.above80 += 1;
+      } else if (average > 50) {
+        buckets.above50 += 1;
+      } else if (average > 30) {
+        buckets.above30 += 1;
+      } else {
+        buckets.below30 += 1;
+      }
+    });
+
+    return [
+      { name: 'Above 90%', value: buckets.above90, fill: '#22c55e' },
+      { name: '80-90%', value: buckets.above80, fill: '#38bdf8' },
+      { name: '50-80%', value: buckets.above50, fill: '#facc15' },
+      { name: '30-50%', value: buckets.above30, fill: '#fb923c' },
+      { name: 'Below 30%', value: buckets.below30, fill: '#ef4444' },
+    ];
+  }, [students]);
+
+  const hasCriticalWarnings = lowMarkStudents.length > 0 || absentWarningStudents.length > 0;
 
   return (
     <DashboardLayout role="teacher">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-headline font-bold text-primary">Class 10-A Overview</h2>
-            <p className="text-muted-foreground">Manage your classroom activities and student progress.</p>
-          </div>
-        </div>
-
-        {aiResult && (
-          <Card className="border-accent/30 bg-accent/5 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
-            <CardHeader className="bg-white/50 border-b flex flex-row items-center justify-between py-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <CardTitle className="font-headline text-lg">AI Classroom Intelligence</CardTitle>
+        <Card className="rounded-3xl border border-border bg-background shadow-sm">
+          <CardContent className="space-y-6 p-6">
+            <div className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
+              <div className="rounded-3xl border border-border bg-slate-50 p-6">
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Academic Responsibility</p>
+                <p className="mt-3 text-2xl font-bold text-foreground">Class - 6th</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setAiResult(null)} className="h-8 w-8">
-                <X className="h-4 w-4 text-muted-foreground" />
-              </Button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Teacher's Attendance</p>
+                  <p className="mt-3 text-4xl font-bold text-primary">92%</p>
+                  <p className="text-xs text-muted-foreground mt-2">Monthly</p>
+                </div>
+                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Number of Students</p>
+                  <p className="mt-3 text-4xl font-bold text-foreground">36</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Average Class Attendance</p>
+              <p className="mt-3 text-4xl font-bold text-foreground">{averageClassAttendance}%</p>
+              <p className="text-xs text-muted-foreground mt-2">Across all students</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <Card className="rounded-3xl border border-border bg-background shadow-sm">
+            <CardHeader className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-lg font-headline">Student Attendance Check</CardTitle>
+              <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${isAttendanceTaken ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}`}>
+                {isAttendanceTaken ? 'Completed' : 'Pending'}
+              </span>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="bg-white/80 p-4 rounded-lg border border-accent/10 shadow-sm">
-                <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <CheckCircle2 className="h-3 w-3" /> Executive Summary
-                </h4>
-                <p className="text-sm leading-relaxed text-foreground/80">{aiResult.summary}</p>
-              </div>
+            <CardContent className="space-y-4 p-6">
+              <p className={`text-sm ${isAttendanceTaken ? 'text-emerald-700' : 'text-muted-foreground'}`}>
+                {isAttendanceTaken
+                  ? 'Attendance has been recorded for today.'
+                  : 'Teacher has not yet taken student attendance today.'}
+              </p>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <h4 className="font-bold text-sm flex items-center gap-2 text-orange-600">
-                    <AlertCircle className="h-4 w-4" /> Intervention Required
-                  </h4>
-                  <div className="space-y-3">
-                    {aiResult.atRiskStudents.map(student => (
-                      <div key={student.studentId} className="p-3 bg-white rounded-lg border border-orange-100 shadow-sm transition-all hover:border-orange-200">
-                        <p className="font-bold text-sm text-primary">{student.studentName}</p>
-                        <p className="text-xs text-muted-foreground mb-2">{student.reason}</p>
-                        <div className="bg-orange-50 p-2 rounded text-[11px] text-orange-700 italic border-l-2 border-orange-400">
-                          <strong>Action:</strong> {student.suggestions}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <h4 className="font-bold text-sm flex items-center gap-2 text-primary">
-                    <Lightbulb className="h-4 w-4" /> Pedagogical Strategy
-                  </h4>
-                  <div className="p-4 bg-white rounded-lg border border-primary/10 shadow-sm h-full">
-                    <p className="text-sm text-muted-foreground leading-relaxed italic">
-                      {aiResult.pedagogicalSuggestions}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-headline">Attendance</CardTitle>
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <ClipboardList className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Today's Log</span>
-                  <Badge variant="outline" className="text-accent border-accent">Completed</Badge>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span>Present Rate</span>
-                    <span className="text-primary">92%</span>
-                  </div>
-                  <Progress value={92} className="h-2" />
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Attendance status is driven by the attendance page. This dashboard reflects the latest recorded state.
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-headline">Pending Marks</CardTitle>
-                <div className="p-2 rounded-lg bg-orange-100">
-                  <GraduationCap className="h-5 w-5 text-orange-600" />
-                </div>
-              </div>
+          <Card className="rounded-3xl border border-border bg-background shadow-sm">
+            <CardHeader className="p-6">
+              <CardTitle className="text-lg font-headline">Alert</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span>Unit Test #2</span>
-                  <span className="font-bold text-orange-600">15/45 Evaluated</span>
-                </div>
-                <div className="space-y-1.5">
-                   <Progress value={33} className="h-2" />
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2 font-bold"
-                  onClick={() => router.push('/dashboard/teacher/marks')}
-                >
-                  Continue Data Entry
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <CardContent className="space-y-4 p-6">
+              {hasCriticalWarnings ? (
+                <div className="space-y-4">
+                  {lowMarkStudents.length > 0 && (
+                    <div className="space-y-2 rounded-3xl border border-red-200 bg-red-50 p-4">
+                      <p className="text-sm font-semibold text-red-700">Low marks alert</p>
+                      <ul className="space-y-2">
+                        {lowMarkStudents.map(({ student, lowMarks }) => (
+                          <li key={student.id} className="text-sm text-red-700">
+                            <span className="font-semibold">{student.name}</span> has low marks in{' '}
+                            {lowMarks.map((mark) => mark.subject).join(', ')}.
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-headline">Resources</CardTitle>
-                <div className="p-2 rounded-lg bg-accent/10">
-                  <Users className="h-5 w-5 text-accent" />
+                  {absentWarningStudents.length > 0 && (
+                    <div className="space-y-2 rounded-3xl border border-red-200 bg-red-50 p-4">
+                      <p className="text-sm font-semibold text-red-700">Attendance alert</p>
+                      <ul className="space-y-2">
+                        {absentWarningStudents.map(({ student, streak }) => (
+                          <li key={student.id} className="text-sm text-red-700">
+                            <span className="font-semibold">{student.name}</span> has been absent for {streak} consecutive days.
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Uniforms Distributed</span>
-                  <span className="font-bold">{students.length > 0 ? `${Math.max(Math.round(((students.length - 2) / students.length) * 100), 0)}%` : '0%'}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Book Kits Remaining</span>
-                  <span className="font-bold text-primary">{students.length > 0 ? '2 Units' : '0 Units'}</span>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-2">Inventory Management</Button>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No alerts at this time.</p>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <Card className="shadow-sm">
-          <CardHeader className="border-b bg-muted/20">
-            <CardTitle className="font-headline text-lg">Daily Schedule & Duties</CardTitle>
+        <Card className="rounded-3xl border border-border bg-background shadow-sm">
+          <CardHeader className="flex items-center justify-between p-6">
+            <div>
+              <CardTitle className="text-lg font-headline">Marks Distribution</CardTitle>
+              <p className="text-sm text-muted-foreground">Student performance buckets by average score.</p>
+            </div>
           </CardHeader>
-          <CardContent className="pt-6">
-             <div className="space-y-3">
-               {[
-                 { time: '09:00 AM', subject: 'Mathematics (Class 10-A)', status: 'Upcoming', type: 'Class' },
-                 { time: '10:30 AM', subject: 'Science - Practical Lab', status: 'Upcoming', type: 'Lab' },
-                 { time: '12:30 PM', subject: 'Mid-Day Meal Duty', status: 'In Progress', type: 'Duty' },
-                 { time: '02:00 PM', subject: 'Staff Meeting', status: 'Upcoming', type: 'Meeting' },
-               ].map((item, idx) => (
-                 <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white border border-border hover:border-primary/20 transition-colors">
-                   <div className="flex items-center gap-6">
-                     <span className="text-xs font-bold text-primary px-3 py-1 bg-primary/5 rounded-md w-24 text-center">
-                       {item.time}
-                     </span>
-                     <div>
-                       <span className="font-bold text-sm block">{item.subject}</span>
-                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{item.type}</span>
-                     </div>
-                   </div>
-                   <Badge variant={item.status === 'In Progress' ? 'default' : 'outline'} className={item.status === 'In Progress' ? 'bg-accent' : ''}>
-                     {item.status}
-                   </Badge>
-                 </div>
-               ))}
-             </div>
+          <CardContent className="p-6">
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={marksDistribution}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={70}
+                    outerRadius={110}
+                    paddingAngle={3}
+                    stroke="transparent"
+                  >
+                    {marksDistribution.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [`${value} students`, 'Count']} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {marksDistribution.map((slice) => (
+                <div key={slice.name} className="rounded-3xl border border-border bg-white p-3 text-center shadow-sm">
+                  <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{slice.name}</div>
+                  <div className="text-2xl font-bold text-foreground">{slice.value}</div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>

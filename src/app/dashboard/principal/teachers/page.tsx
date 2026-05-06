@@ -44,6 +44,8 @@ export default function PrincipalTeachers() {
     const subject = formData.get('subject') as string;
     const exp = formData.get('experience') as string;
     const classes = formData.get('classes') as string;
+    const email = (formData.get('email') as string).trim();
+    const password = formData.get('password') as string;
 
     const newTeacher = {
       id: `T${teachers.length + 1}`,
@@ -52,7 +54,9 @@ export default function PrincipalTeachers() {
       classes,
       experience: `${exp} Years`,
       rating: 5.0,
-      status: 'Present'
+      status: 'Present',
+      email,
+      password,
     };
 
     // Simulate network latency
@@ -238,8 +242,12 @@ export default function PrincipalTeachers() {
                 <Input id="classes" name="classes" placeholder="e.g. 10A, 11C, 12B" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Official Email (Optional)</Label>
-                <Input id="email" type="email" placeholder="name@school.gov" />
+                <Label htmlFor="email">Official Email</Label>
+                <Input id="email" name="email" type="email" placeholder="name@school.gov" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" name="password" type="password" placeholder="Create login password" required />
               </div>
             </div>
             <DialogFooter>

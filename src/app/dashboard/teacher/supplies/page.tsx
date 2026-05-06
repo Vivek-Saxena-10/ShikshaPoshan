@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,64 +17,261 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { useToast } from '@/hooks/use-toast';
 import { useClassStudents } from '@/lib/student-store';
+import { getStoredSupplyRequests, saveSupplyRequests, subscribeSupplyRequests, SupplyRequest } from '@/lib/supply-request-store';
+
+type SupplyStatus = 'distributed' | 'pending';
+
+type StudentSupply = {
+  id: string;
+  name: string;
+  textbooks: SupplyStatus;
+  uniforms: SupplyStatus;
+  stationary: SupplyStatus;
+};
+
+const createStudentSupplyRow = (student: { id: string; name: string }, index: number): StudentSupply => ({
+  id: student.id,
+  name: student.name,
+  textbooks: index % 3 !== 0 ? 'distributed' : 'pending',
+  uniforms: index % 4 !== 0 ? 'distributed' : 'pending',
+  stationary: index % 5 !== 0 ? 'distributed' : 'pending',
+});
 
 export default function TeacherSupplies() {
+  const { toast } = useToast();
   const students = useClassStudents('10-A');
+  const [studentSupplies, setStudentSupplies] = useState<StudentSupply[]>([]);
+  const [supplyRequests, setSupplyRequests] = useState<SupplyRequest[]>(() => getStoredSupplyRequests());
+  const [requestType, setRequestType] = useState<'textbooks' | 'uniforms' | 'stationary'>('textbooks');
+  const [requestClass, setRequestClass] = useState('10-A');
+  const [requestQuantity, setRequestQuantity] = useState('1');
+  const [requestReason, setRequestReason] = useState('');
   const [isLogOpen, setIsLogOpen] = useState(false);
-  const [selectedSupply, setSelectedSupply] = useState('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentSupply | null>(null);
+  const [selectedSupply, setSelectedSupply] = useState<'textbooks' | 'uniforms' | 'stationary' | ''>('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [quantity, setQuantity] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = subscribeSupplyRequests(() => {
+      setSupplyRequests(getStoredSupplyRequests());
+    });
+
+    return unsubscribe;
+  }, []);
+
   const classStrength = students.length;
   const subjectOptions = ['Math', 'Science', 'English', 'Social Studies', 'Hindi'];
-  const supplies = [
-    { title: 'Textbook Sets', distributed: classStrength, target: classStrength, icon: BookOpen, color: 'text-primary' },
-    { title: 'School Uniforms', distributed: Math.max(classStrength - 2, 0), target: classStrength, icon: Shirt, color: 'text-accent' },
-    { title: 'Stationary Kits', distributed: Math.max(classStrength - 1, 0), target: classStrength, icon: Package, color: 'text-orange-500' },
-  ];
+
+  useEffect(() => {
+    const initialRows = students.map(createStudentSupplyRow);
+    const hasSameStudents = studentSupplies.length === students.length && students.every((student, index) => studentSupplies[index]?.id === student.id);
+    if (hasSameStudents && studentSupplies.length > 0) {
+      return;
+    }
+
+    setStudentSupplies(initialRows);
+  }, [students, studentSupplies]);
+
+  const openEditDialog = (row: StudentSupply) => {
+    setEditingStudent(row);
+    setIsEditOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingStudent) {
+      return;
+    }
+
+    setStudentSupplies((prev) => prev.map((row) => row.id === editingStudent.id ? editingStudent : row));
+    setIsEditOpen(false);
+  };
+
+  const getTargetSection = (type: string) =>
+    type === 'stationary' ? 'Stationery Section' : 'Uniforms & Books Section';
+
+  const submitSupplyRequest = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const quantity = Number(requestQuantity);
+    if (!requestType || quantity <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid request',
+        description: 'Please select a valid item and quantity.',
+      });
+      return;
+    }
+
+    const newRequest: SupplyRequest = {
+      id: `${Date.now()}`,
+      type: requestType,
+      quantity,
+      section: requestClass,
+      reason: requestReason,
+      target: getTargetSection(requestType),
+      date: new Date().toLocaleDateString(),
+    };
+
+    setSupplyRequests((prev) => {
+      const updated = [newRequest, ...prev];
+      saveSupplyRequests(updated);
+      return updated;
+    });
+
+    setRequestReason('');
+    setRequestQuantity('1');
+    setRequestType('textbooks');
+
+    toast({
+      title: 'Request submitted',
+      description: `Sent to ${newRequest.target} for ${newRequest.type}.`,
+    });
+  };
+
+  const logDistribution = () => {
+    if (!selectedSupply || Number(quantity) <= 0) {
+      setIsLogOpen(false);
+      setSelectedSupply('');
+      setSelectedSubject('');
+      setQuantity('');
+      return;
+    }
+
+    const amount = Number(quantity);
+    setStudentSupplies((prev) => {
+      const currentDistributed = prev.filter((row) => row[selectedSupply] === 'distributed').length;
+      const targetDistributed = Math.min(classStrength, currentDistributed + amount);
+      let distributedCount = 0;
+
+      return prev.map((row) => {
+        if (row[selectedSupply] === 'distributed') {
+          distributedCount += 1;
+          return row;
+        }
+
+        if (distributedCount < targetDistributed) {
+          distributedCount += 1;
+          return { ...row, [selectedSupply]: 'distributed' };
+        }
+
+        return row;
+      });
+    });
+
+    setIsLogOpen(false);
+    setSelectedSupply('');
+    setSelectedSubject('');
+    setQuantity('');
+  };
 
   return (
     <DashboardLayout role="teacher">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-headline font-bold text-primary">Classroom Logistics</h2>
-            <p className="text-muted-foreground">Distribution tracking for Grade 10-A supplies.</p>
-          </div>
-          <Button className="bg-accent" onClick={() => {
-            setSelectedSupply('');
-            setSelectedSubject('');
-            setQuantity('');
-            setIsLogOpen(true);
-          }}>
-            <Truck className="mr-2 h-4 w-4" /> Log New Distribution
-          </Button>
+        <div>
+          <h2 className="text-2xl font-headline font-bold text-primary">Classroom Logistics</h2>
+          <p className="text-muted-foreground">Request supplies for your class and track current textbook, uniform, and stationary counts.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {supplies.map((item, i) => (
-            <Card key={i} className="border-none shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className={`p-3 rounded-xl bg-muted ${item.color}`}>
-                    <item.icon className="h-6 w-6" />
+        <div className="space-y-6">
+          <Card className="shadow-sm border border-border">
+            <CardHeader>
+              <div>
+                <CardTitle className="font-headline text-lg">Request Supplies</CardTitle>
+                <CardDescription>Send a requisition to the relevant principal sections for uniforms, books, or stationery.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-4" onSubmit={submitSupplyRequest}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="requestType">Request Type</Label>
+                    <Select value={requestType} onValueChange={(value) => setRequestType(value as 'textbooks' | 'uniforms' | 'stationary')}>
+                      <SelectTrigger id="requestType">
+                        <SelectValue placeholder="Select item type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="textbooks">Textbooks</SelectItem>
+                        <SelectItem value="uniforms">Uniforms</SelectItem>
+                        <SelectItem value="stationary">Stationery</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Badge variant={item.distributed === item.target ? "default" : "outline"} className={item.distributed === item.target ? "bg-accent" : "text-orange-500 border-orange-500"}>
-                    {item.target > 0 ? Math.round((item.distributed / item.target) * 100) : 0}% Fulfilled
-                  </Badge>
+                  <div className="space-y-2">
+                    <Label htmlFor="requestClass">Class Section</Label>
+                    <Input
+                      id="requestClass"
+                      value={requestClass}
+                      onChange={(e) => setRequestClass(e.target.value)}
+                      placeholder="e.g. 10-A"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-bold text-muted-foreground">{item.title}</p>
-                  <div className="flex justify-between items-end">
-                    <p className="text-3xl font-bold">{item.distributed}</p>
-                    <p className="text-xs text-muted-foreground font-medium">Class Strength: {item.target}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="requestQuantity">Quantity</Label>
+                    <Input
+                      id="requestQuantity"
+                      type="number"
+                      min={1}
+                      value={requestQuantity}
+                      onChange={(e) => setRequestQuantity(e.target.value)}
+                      placeholder="Enter quantity"
+                    />
                   </div>
-                  <Progress value={item.target > 0 ? (item.distributed / item.target) * 100 : 0} className="h-2" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="requestReason">Reason / Notes</Label>
+                  <Input
+                    id="requestReason"
+                    value={requestReason}
+                    onChange={(e) => setRequestReason(e.target.value)}
+                    placeholder="Provide a short justification"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Requests for textbooks and uniforms are routed to the Uniforms & Books Section. Stationery requests are routed to the Stationery Section.
+                  </div>
+                  <Button type="submit" className="bg-primary">
+                    Submit Request
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+
+            {supplyRequests.length > 0 ? (
+              <CardContent className="border-t border-border pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold">Recent Requests</p>
+                  <Badge variant="outline">{supplyRequests.length} total</Badge>
+                </div>
+                <div className="space-y-3">
+                  {supplyRequests.slice(0, 3).map((request) => (
+                    <div key={request.id} className="rounded-2xl border border-border p-4 bg-secondary/10">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold">{request.type === 'stationary' ? 'Stationery' : request.type === 'uniforms' ? 'Uniforms' : 'Textbooks'}</p>
+                        <Badge variant="outline">{request.date}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Qty: {request.quantity}</p>
+                      <p className="text-sm text-muted-foreground">Route: {request.target}</p>
+                      {request.reason && <p className="text-sm mt-2">"{request.reason}"</p>}
+                    </div>
+                  ))}
+                  {supplyRequests.length > 3 && (
+                    <p className="text-xs text-muted-foreground">Showing the latest 3 requests.</p>
+                  )}
                 </div>
               </CardContent>
-            </Card>
-          ))}
+            ) : null}
+          </Card>
         </div>
 
         <Card className="border-l-4 border-l-primary shadow-sm">
@@ -93,27 +290,18 @@ export default function TeacherSupplies() {
                   <TableHead className="text-center">Textbooks</TableHead>
                   <TableHead className="text-center">Uniforms</TableHead>
                   <TableHead className="text-center">Stationary</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.map((student, i) => {
-                  // Mocking distribution status for visual variety
-                  const hasUniform = i % 4 !== 0;
-                  const hasStationary = i % 8 !== 0;
-                  return (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-mono text-xs font-bold">{student.id}</TableCell>
-                      <TableCell className="text-sm font-medium">{student.name}</TableCell>
-                      <TableCell className="text-center">
+                {studentSupplies.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-mono text-xs font-bold">{row.id}</TableCell>
+                    <TableCell className="text-sm font-medium">{row.name}</TableCell>
+                    {[row.textbooks, row.uniforms, row.stationary].map((status, index) => (
+                      <TableCell key={index} className="text-center">
                         <div className="flex justify-center">
-                          <div className="p-1 rounded-full bg-accent/10">
-                             <CheckCircle2 className="h-4 w-4 text-accent" />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          {hasUniform ? (
+                          {status === 'distributed' ? (
                             <div className="p-1 rounded-full bg-accent/10">
                               <CheckCircle2 className="h-4 w-4 text-accent" />
                             </div>
@@ -124,22 +312,14 @@ export default function TeacherSupplies() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          {hasStationary ? (
-                            <div className="p-1 rounded-full bg-accent/10">
-                              <CheckCircle2 className="h-4 w-4 text-accent" />
-                            </div>
-                          ) : (
-                            <div className="p-1 rounded-full bg-orange-100">
-                              <AlertCircle className="h-4 w-4 text-orange-600" />
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    ))}
+                    <TableCell className="text-center">
+                      <Button size="sm" variant="outline" onClick={() => openEditDialog(row)}>
+                        Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -161,7 +341,7 @@ export default function TeacherSupplies() {
                 <Select
                   value={selectedSupply}
                   onValueChange={(value) => {
-                    setSelectedSupply(value);
+                    setSelectedSupply(value as 'textbooks' | 'uniforms' | 'stationary' | '');
                     if (value !== 'textbooks') {
                       setSelectedSubject('');
                     }
@@ -210,21 +390,78 @@ export default function TeacherSupplies() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2">
+            <DialogFooter className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsLogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => {
-                // TODO: Implement logging logic
-                console.log('Logging distribution:', { selectedSupply, selectedSubject, quantity });
-                setIsLogOpen(false);
-                setSelectedSupply('');
-                setSelectedSubject('');
-                setQuantity('');
-              }}>
+              <Button onClick={logDistribution}>
                 Log Distribution
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Supply Status</DialogTitle>
+              <DialogDescription>Adjust supply distribution for the selected student.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="textbooks" className="text-right">Textbooks</Label>
+                <Select
+                  value={editingStudent?.textbooks ?? 'pending'}
+                  onValueChange={(value) => setEditingStudent((prev) => prev ? { ...prev, textbooks: value as SupplyStatus } : prev)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Textbook status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="distributed">Distributed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="uniforms" className="text-right">Uniforms</Label>
+                <Select
+                  value={editingStudent?.uniforms ?? 'pending'}
+                  onValueChange={(value) => setEditingStudent((prev) => prev ? { ...prev, uniforms: value as SupplyStatus } : prev)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Uniform status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="distributed">Distributed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="stationary" className="text-right">Stationary</Label>
+                <Select
+                  value={editingStudent?.stationary ?? 'pending'}
+                  onValueChange={(value) => setEditingStudent((prev) => prev ? { ...prev, stationary: value as SupplyStatus } : prev)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Stationary status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="distributed">Distributed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <DialogFooter className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={!editingStudent}>
+                Save Changes
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

@@ -260,10 +260,6 @@ export default function PrincipalClasses() {
                   <Label htmlFor="strength">Student Strength</Label>
                   <Input id="strength" name="strength" type="number" defaultValue="40" required />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="year">Academic Year</Label>
-                  <Input id="year" name="year" defaultValue="2023-2024" required />
-                </div>
               </div>
             </div>
             <DialogFooter>

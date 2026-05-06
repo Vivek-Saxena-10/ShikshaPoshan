@@ -48,8 +48,6 @@ const NAVIGATION: Record<string, NavItem[]> = {
   principal: [
     { title: 'Home', href: '/dashboard/principal', icon: Home },
     { title: 'Classes', href: '/dashboard/principal/classes', icon: Users },
-    { title: 'Mid-Day Meal', href: '/dashboard/principal/meals', icon: Utensils },
-    { title: 'Infra & Safety', href: '/dashboard/principal/safety', icon: ShieldCheck },
     { title: 'Teacher Details', href: '/dashboard/principal/teachers', icon: GraduationCap },
     { title: 'Uniforms & Books', href: '/dashboard/principal/supplies', icon: BookOpen },
   ],
