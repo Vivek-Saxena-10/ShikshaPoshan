@@ -39,10 +39,7 @@ const NAVIGATION: Record<string, NavItem[]> = {
   administrator: [
     { title: 'Home', href: '/dashboard/administrator', icon: Home },
     { title: 'Schools', href: '/dashboard/administrator/schools', icon: School },
-    { title: 'Mid-Day Meals', href: '/dashboard/administrator/meals', icon: Utensils },
     { title: 'Academic Performance', href: '/dashboard/administrator/academic', icon: BarChart3 },
-    { title: 'Infrastructure', href: '/dashboard/administrator/infra', icon: Building2 },
-    { title: 'Uniforms & Books', href: '/dashboard/administrator/supplies', icon: BookOpen },
     { title: 'Alerts', href: '/dashboard/administrator/alerts', icon: Bell },
   ],
   principal: [
@@ -50,21 +47,17 @@ const NAVIGATION: Record<string, NavItem[]> = {
     { title: 'Classes', href: '/dashboard/principal/classes', icon: Users },
     { title: 'Teacher Details', href: '/dashboard/principal/teachers', icon: GraduationCap },
     { title: 'Teachers Attendance', href: '/dashboard/principal/teachers-attendance', icon: ClipboardList },
-    { title: 'Meal Review', href: '/dashboard/principal/meal-review', icon: Utensils },
-    { title: 'Uniforms & Books', href: '/dashboard/principal/supplies', icon: BookOpen },
   ],
   teacher: [
     { title: 'Home', href: '/dashboard/teacher', icon: Home },
     { title: 'Attendance', href: '/dashboard/teacher/attendance', icon: ClipboardList },
     { title: 'Students Marks', href: '/dashboard/teacher/marks', icon: BarChart3 },
     { title: 'Student Details', href: '/dashboard/teacher/students', icon: Users },
-    { title: 'Uniforms & Books', href: '/dashboard/teacher/supplies', icon: BookOpen },
   ],
   staff: [
     { title: 'Home', href: '/dashboard/staff', icon: Home },
     { title: 'Stock Management', href: '/dashboard/staff/meals', icon: Utensils },
     { title: 'Cleanliness', href: '/dashboard/staff/cleaning', icon: Trash2 },
-    { title: 'Infrastructure Management', href: '/dashboard/staff/infrastructure', icon: Building2 },
   ],
 };
 
