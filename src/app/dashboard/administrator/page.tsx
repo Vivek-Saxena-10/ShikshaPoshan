@@ -84,61 +84,6 @@ export default function AdminHome() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-headline">MDM Coverage Distribution</CardTitle>
-              <CardDescription>Percentage of students receiving meals by district</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ChartContainer config={mdmConfig} className="h-full w-full">
-                <BarChart data={mdmCoverageData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="district" 
-                    tickLine={false} 
-                    tickMargin={10} 
-                    axisLine={false} 
-                  />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="coverage" fill="var(--color-coverage)" radius={4} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-headline">Academic Trends</CardTitle>
-              <CardDescription>Average performance scores across primary and secondary levels</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ChartContainer config={academicConfig} className="h-full w-full">
-                <LineChart data={academicTrendData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="month" 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickMargin={10} 
-                  />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="score" 
-                    stroke="var(--color-score)" 
-                    strokeWidth={3} 
-                    dot={{ r: 4, fill: "var(--color-score)" }} 
-                    activeDot={{ r: 6 }} 
-                  />
-                </LineChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="font-headline">Recent Alerts</CardTitle>

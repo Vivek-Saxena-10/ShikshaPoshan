@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -50,6 +51,7 @@ import { collection, serverTimestamp, doc } from 'firebase/firestore';
 
 export default function AdminSchools() {
   const { toast } = useToast();
+  const router = useRouter();
   
   // Modal visibility states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -243,18 +245,19 @@ export default function AdminSchools() {
                 <TableBody>
                   {filteredSchools.length > 0 ? (
                     filteredSchools.map((school) => (
-                      <TableRow key={school.id}>
+                      <TableRow 
+                        key={school.id}
+                        onClick={() => router.push(`/dashboard/administrator/schools/${school.id}`)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <div className="p-2 rounded-md bg-primary/5 text-primary">
                               <SchoolIcon className="h-4 w-4" />
                             </div>
-                            <Link 
-                              href={`/dashboard/administrator/schools/${school.id}`}
-                              className="hover:underline underline-offset-4 decoration-primary/30"
-                            >
+                            <span className="hover:underline underline-offset-4 decoration-primary/30">
                               {school.name}
-                            </Link>
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>{school.district}</TableCell>
@@ -264,7 +267,7 @@ export default function AdminSchools() {
                             Active
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
